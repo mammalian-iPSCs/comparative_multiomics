@@ -11,11 +11,18 @@
 
 # BasicQC Nextflow Pipeline - Test Suite
 # Submit with: sbatch submit_tests.sh
+# For Kraken2 only: sbatch submit_tests.sh --kraken-only
+# For fresh Kraken2 test (no resume): sbatch submit_tests.sh --kraken-fresh
+# For full pipeline only: sbatch submit_tests.sh --full
 
 # Set paths
 PIPELINE_DIR="/scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/nf-basicqc"
-FASTQ_SCREEN_CONF="/scratch_isilon/groups/compgen/data/Illumina_CryoZoo/genomes/FastQ_Screen_Genomes/fastq_screen.conf"
+FASTQ_SCREEN_CONF="/scratch_isilon/groups/compgen/data/Illumina_CryoZoo/genomes/FastQ_Screen_Genomes/FastQ_Screen_Genomes/fastq_screen.conf"
 KRAKEN2_DB="/scratch_isilon/groups/compgen/data/Illumina_CryoZoo/genomes/kraken"
+
+# Project metadata for MultiQC report
+PROJECT_NAME="CGLZOO_01"
+APPLICATION="RNA-seq"
 
 cd $PIPELINE_DIR
 
@@ -25,6 +32,64 @@ echo "========================================="
 # Load nextflow if needed (uncomment/modify as needed for your cluster)
 # module load nextflow
 # module load singularity
+
+# Check for --kraken-only flag
+if [[ "$1" == "--kraken-only" ]]; then
+    echo "$(date) === Running Kraken2 batch test only ==="
+    nextflow run main.nf \
+        --input test/test_samplesheet.csv \
+        --outdir test/results_kraken2 \
+        --skip_fastqc \
+        --skip_fastq_screen \
+        --kraken2_db $KRAKEN2_DB \
+        --kraken2_subsample 100000 \
+        --project_name $PROJECT_NAME \
+        --application $APPLICATION \
+        -profile singularity,slurm \
+        -resume
+    echo "$(date) === Kraken2 test complete ==="
+    echo "Check results in: $PIPELINE_DIR/test/results_kraken2"
+    exit 0
+fi
+
+# Fresh Kraken2 test without resume (use after config changes)
+if [[ "$1" == "--kraken-fresh" ]]; then
+    echo "$(date) === Running fresh Kraken2 batch test (no resume) ==="
+    # Clean previous work dirs to ensure fresh job submission
+    echo "Cleaning previous work directories..."
+    rm -rf work/
+    nextflow run main.nf \
+        --input test/test_samplesheet.csv \
+        --outdir test/results_kraken2 \
+        --skip_fastqc \
+        --skip_fastq_screen \
+        --kraken2_db $KRAKEN2_DB \
+        --kraken2_subsample 100000 \
+        --project_name $PROJECT_NAME \
+        --application $APPLICATION \
+        -profile singularity,slurm
+    echo "$(date) === Kraken2 test complete ==="
+    echo "Check results in: $PIPELINE_DIR/test/results_kraken2"
+    exit 0
+fi
+
+# Full pipeline test only
+if [[ "$1" == "--full" ]]; then
+    echo "$(date) === Running full pipeline test ==="
+    nextflow run main.nf \
+        --input test/test_samplesheet.csv \
+        --outdir test/results_full \
+        --fastq_screen_conf $FASTQ_SCREEN_CONF \
+        --kraken2_db $KRAKEN2_DB \
+        --kraken2_subsample 100000 \
+        --project_name $PROJECT_NAME \
+        --application $APPLICATION \
+        -profile singularity,slurm \
+        -resume
+    echo "$(date) === Full pipeline test complete ==="
+    echo "Check results in: $PIPELINE_DIR/test/results_full"
+    exit 0
+fi
 
 #------------------------------------------------------------------------------
 # TEST 1: FastQC only
@@ -73,6 +138,8 @@ nextflow run main.nf \
     --fastq_screen_conf $FASTQ_SCREEN_CONF \
     --kraken2_db $KRAKEN2_DB \
     --kraken2_subsample 100000 \
+    --project_name $PROJECT_NAME \
+    --application $APPLICATION \
     -profile singularity,slurm \
     -resume
 

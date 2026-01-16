@@ -15,11 +15,12 @@
 nextflow.enable.dsl = 2
 
 // Import modules
-include { FASTQC          } from './modules/fastqc'
-include { FASTQ_SCREEN    } from './modules/fastq_screen'
-include { SEQTK_SUBSAMPLE } from './modules/seqtk_subsample'
-include { KRAKEN2         } from './modules/kraken2'
-include { MULTIQC         } from './modules/multiqc'
+include { FASTQC                  } from './modules/fastqc'
+include { FASTQ_SCREEN            } from './modules/fastq_screen'
+include { SEQTK_SUBSAMPLE         } from './modules/seqtk_subsample'
+include { KRAKEN2_BATCH           } from './modules/kraken2_batch'
+include { MULTIQC                 } from './modules/multiqc'
+include { PREPARE_MULTIQC_CONFIG  } from './modules/prepare_multiqc_config'
 
 /*
 ========================================================================================
@@ -46,12 +47,16 @@ def helpMessage() {
       --skip_fastqc         Skip FastQC step
       --skip_fastq_screen   Skip FastQ Screen step
       --skip_kraken2        Skip Kraken2 step
+      --project_name        Project name for MultiQC report header (e.g., 'CGLZOO_01')
+      --application         Application type for MultiQC header (e.g., 'RNA-seq')
       -profile              Configuration profile (singularity, docker, conda)
 
     Samplesheet format (CSV):
-      sample,fastq_1,fastq_2
-      sample1,/path/to/sample1_R1.fastq.gz,/path/to/sample1_R2.fastq.gz
-      sample2,/path/to/sample2_R1.fastq.gz,/path/to/sample2_R2.fastq.gz
+      sample,fastq_1,fastq_2,sample_name,species
+      HFYMJDSXC_1_8bp-UDP0032,/path/to/R1.fastq.gz,/path/to/R2.fastq.gz,BB1523,Callithrix geoffroyi
+      HFYMJDSXC_1_8bp-UDP0034,/path/to/R1.fastq.gz,/path/to/R2.fastq.gz,BB1525,Gorilla gorilla
+
+    Note: sample_name and species columns are optional but enable better MultiQC grouping
     """.stripIndent()
 }
 
@@ -108,6 +113,21 @@ def parse_samplesheet(samplesheet) {
         }
 }
 
+// Parse samplesheet for metadata (sample_name, species)
+def parse_samplesheet_metadata(samplesheet) {
+    Channel
+        .fromPath(samplesheet)
+        .splitCsv(header: true)
+        .map { row ->
+            [
+                fli: row.sample,
+                sample_name: row.sample_name ?: row.sample,
+                species: row.species ?: ''
+            ]
+        }
+        .collect()
+}
+
 /*
 ========================================================================================
     MAIN WORKFLOW
@@ -119,6 +139,9 @@ workflow {
     // Parse samplesheet and create input channel
     ch_reads = parse_samplesheet(params.input)
 
+    // Parse sample metadata for MultiQC config
+    ch_sample_metadata = parse_samplesheet_metadata(params.input)
+
     // Initialize empty channels for MultiQC
     ch_multiqc_files = Channel.empty()
 
@@ -127,7 +150,7 @@ workflow {
     //
     if (!params.skip_fastqc) {
         FASTQC(ch_reads)
-        ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip)
+        ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.map { it[1] })
     }
 
     //
@@ -140,12 +163,13 @@ workflow {
         } else {
             ch_fastq_screen_conf = file(params.fastq_screen_conf)
             FASTQ_SCREEN(ch_reads, ch_fastq_screen_conf)
-            ch_multiqc_files = ch_multiqc_files.mix(FASTQ_SCREEN.out.txt)
+            ch_multiqc_files = ch_multiqc_files.mix(FASTQ_SCREEN.out.txt.map { it[1] })
         }
     }
 
     //
-    // MODULE: Kraken2 (with subsampling)
+    // MODULE: Kraken2 (with subsampling) - BATCH MODE
+    // Processes all samples in a single job to avoid reloading the large database
     //
     if (!params.skip_kraken2) {
         if (!params.kraken2_db) {
@@ -156,20 +180,44 @@ workflow {
             // Subsample reads before Kraken2 for efficiency
             SEQTK_SUBSAMPLE(ch_reads, params.kraken2_subsample)
 
-            // Run Kraken2 on subsampled reads
-            KRAKEN2(SEQTK_SUBSAMPLE.out.reads, ch_kraken2_db)
-            ch_multiqc_files = ch_multiqc_files.mix(KRAKEN2.out.report)
+            // Collect all subsampled reads for batch processing
+            ch_subsampled_reads = SEQTK_SUBSAMPLE.out.reads
+                .map { sample, reads -> reads }
+                .flatten()
+                .collect()
+
+            ch_sample_names = SEQTK_SUBSAMPLE.out.reads
+                .map { sample, reads -> sample }
+                .collect()
+
+            // Run Kraken2 in batch mode (database loaded once)
+            KRAKEN2_BATCH(ch_subsampled_reads, ch_kraken2_db, ch_sample_names)
+            ch_multiqc_files = ch_multiqc_files.mix(KRAKEN2_BATCH.out.reports.flatten())
         }
     }
+
+    //
+    // Generate MultiQC config with sample metadata
+    //
+    PREPARE_MULTIQC_CONFIG(
+        ch_sample_metadata,
+        params.project_name,
+        params.application
+    )
 
     //
     // MODULE: MultiQC
     //
     ch_multiqc_files
+        .flatten()
         .collect()
+        .filter { it.size() > 0 }
         .set { ch_multiqc_input }
 
-    MULTIQC(ch_multiqc_input)
+    MULTIQC(
+        ch_multiqc_input,
+        PREPARE_MULTIQC_CONFIG.out.config
+    )
 }
 
 /*

@@ -17,3 +17,6 @@ singularity/
 # Mac files
 .DS_Store
 ._*
+
+# Cluster-specific config (may contain sensitive info)
+conf/slurm.config

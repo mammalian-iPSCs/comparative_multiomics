@@ -11,6 +11,7 @@ process MULTIQC {
 
     input:
     path multiqc_files
+    path generated_config
 
     output:
     path "*_multiqc_report.html", emit: report
@@ -24,8 +25,9 @@ process MULTIQC {
     script:
     def args = task.ext.args ?: ''
     def title = params.multiqc_title ? "--title \"${params.multiqc_title}\"" : ''
-    def config = params.multiqc_config ? "--config ${params.multiqc_config}" : ''
-    def prefix = params.multiqc_title ? params.multiqc_title.replaceAll('\\s+', '_') : 'basicqc'
+    // Use generated config, but allow user override
+    def config = params.multiqc_config ? "--config ${params.multiqc_config}" : "--config ${generated_config}"
+    def prefix = params.project_name ? params.project_name.replaceAll('\\s+', '_') : (params.multiqc_title ? params.multiqc_title.replaceAll('\\s+', '_') : 'basicqc')
     """
     multiqc \\
         --force \\
