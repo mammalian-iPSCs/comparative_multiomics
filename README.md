@@ -3,7 +3,7 @@
 ## Overview 
 
 ![Workflow showing the general preprocesing startegy](processing_workflow.drawio.png)
-This repository contains scripts to process high throughput sequencing data from different molecular assays using standardized nf-core pipelines and refgenie to manage the high number of genomes and annotations. TOGA genome annotations are either downloaded from ... or generated from scratch using TOGA.
+This repository contains scripts to process high throughput sequencing data from different molecular assays using standardized nf-core pipelines and refgenie to manage the high number of genomes and annotations. TOGA genome annotations are either downloaded from the [Hiller Lab server](https://genome.senckenberg.de//download/TOGA/) or generated from scratch using TOGA.
 
 
 ## BasicQC pipeline
