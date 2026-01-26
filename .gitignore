@@ -1,3 +1,6 @@
+# Archived old pipeline code
+BasicQC/pipeline_v1/
+
 **/CGLZOO_*/
 **/logs/
 *.fastq.gz
@@ -29,3 +32,4 @@ genomes/chains/
 data_transfer/
 RNA-seq/Batch1_HQ_Genomes/
 genomes/chains/
+.DS_Store

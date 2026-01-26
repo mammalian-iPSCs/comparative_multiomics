@@ -7,34 +7,21 @@ This repository contains scripts to process high throughput sequencing data from
 
 
 ## BasicQC pipeline
-This section describes the initial quality control (QC) steps for raw sequencing data.  
+Initial quality control (QC) for raw sequencing data using a Nextflow pipeline.
 
-- **Input**: cnag sample info  
-- **Tools**: [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), [FastQ Screen](https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/), [kraken2](https://ccb.jhu.edu/software/kraken2/)  
-- **Output**: Multi QC reports (HTML/summary tables)  
+- **Input**: Sample sheet CSV with sample IDs and FASTQ file paths
+- **Tools**: [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), [FastQ Screen](https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/), [Kraken2](https://ccb.jhu.edu/software/kraken2/), [MultiQC](https://multiqc.info/)
+- **Output**: MultiQC reports (HTML/summary tables)
 
 **Usage example:**
 ```bash
-### activate the conda environment
-conda activate basicQC
+nextflow run /Users/lucas/scratch/lwange/nf-basicqc/main.nf \
+    --input samplesheet.csv \
+    --outdir results \
+    -profile slurm
 ```
-To run the frist part of the pipeline:
 
-```bash
-## run QC version 1.3
-bash runQC_1.3.sh </raw/data/path/> <cnag_project> </result/path/>
-bash runQC_1.3.sh /scratch_isilon/groups/compgen/data_transfer CGLZOO_01 RNA-seq /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC
-
-```
-to run MultiQC
-
-```bash
-conda activate multiQC
-
-sbatch runMultiQC.sh </result/path/cnag_project/>
-sbatch runMultiQC.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_01
-```
-For more information [BasicQC pipeline](BasicQC/README.md)  
+For more information see the [nf-basicqc repository](https://github.com/lwange/nf-basicqc) or [BasicQC/nf-basicqc](BasicQC/nf-basicqc)  
 
 
 ## ATAC-seq
