@@ -21,7 +21,7 @@ nextflow run /Users/lucas/scratch/lwange/nf-basicqc/main.nf \
     -profile slurm
 ```
 
-For more information see the [nf-basicqc repository](https://github.com/lwange/nf-basicqc) or [BasicQC/nf-basicqc](BasicQC/nf-basicqc)  
+For more information see the [nf-basicqc repository](https://github.com/lewange/nf-basicqc) or [BasicQC/nf-basicqc](BasicQC/nf-basicqc)  
 
 
 ## ATAC-seq
