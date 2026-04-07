@@ -17,7 +17,11 @@ BasicQC/pipeline_v1/
 **/data/
 **/FastQ_Screen_Genomes/
 **/kraken/
-genomes/
+genomes/*
+!genomes/README.md
+!genomes/scripts/
+!genomes/genome_metadata.tsv
+!genomes/update_genome_list.sh
 genomes/ncbi_dataset/
 genomes/primate_T2T/
 genomes/rRNA_indices/
