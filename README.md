@@ -25,30 +25,16 @@ For more information see the [nf-basicqc repository](https://github.com/lewange/
 
 
 ## ATAC-seq
-Pipeline for ATAC-seq processing and analysis.  
+ATAC-seq data is processed using [nf-core/atacseq](https://nf-co.re/atacseq). The general strategy is to run the pipeline once per species: a wrapper script generates a per-species SLURM job that builds the nf-core samplesheet and parameter file (fetching genome paths from refgenie) and then submits the nf-core run. This way all species can be processed in parallel with one `sbatch` call per genome.
 
-- **Steps**: alignment → filtering → peak calling → QC (TSS enrichment, FRiP, duplication rates) → downstream analysis.  
-- **Key tools**: e.g. BWA, Picard, MACS2, ArchR.  
-- **Outputs**: fragment files, peak calls, QC plots.  
-
-**Usage example:**
-```bash
-nextflow run atacseq.nf --genome hg38 --reads "data/atac/*.fastq.gz"
-```
+See [ATAC/README.md](ATAC/README.md) for usage details.
 
 ---
 
 ## RNA-seq
-Pipeline for RNA-seq processing and analysis.  
+RNA-seq data is processed using [nf-core/rnaseq](https://nf-co.re/rnaseq), following the same per-species strategy as ATAC-seq. The wrapper script generates a SLURM job per genome that builds the samplesheet and parameter file from refgenie assets (fasta, GTF, pre-built STAR index, ERCC spike-in) and launches the nf-core pipeline.
 
-- **Steps**: trimming → alignment/quantification → QC → differential expression analysis.  
-- **Key tools**: e.g. STAR, Salmon, DESeq2.  
-- **Outputs**: gene count matrices, QC reports, differential expression tables.  
-
-**Usage example:**
-```bash
-nextflow run rnaseq.nf --genome hg38 --reads "data/rna/*.fastq.gz"
-```
+See [RNA-seq/README.md](RNA-seq/README.md) for usage details.
 
 ---
 
