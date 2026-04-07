@@ -40,7 +40,7 @@ See [RNA-seq/README.md](RNA-seq/README.md) for usage details.
 
 ## Genomes
 This repository uses [refgenie](http://refgenie.databio.org/) to manage genome references.  
-
+See [genomes/README.md](genomes/README.md) for instructions on how to download and add genomes and assets.
 The available genomes are listed below and updated automatically:  
 
 <!-- GENOMES_START -->
