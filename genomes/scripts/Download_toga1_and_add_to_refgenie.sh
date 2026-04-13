@@ -10,6 +10,11 @@
 set -euo pipefail
 
 #########################
+# Conda env
+#########################
+export PATH="/home/groups/compgen/lwange/.conda/envs/genomes/bin:$HOME/ucsc-bin-env/bin:$PATH"
+
+#########################
 # Usage
 #########################
 usage() {
@@ -163,14 +168,20 @@ fi
 #########################
 if [[ -z "$TSV_FILE" ]]; then
     TSV_FILE="$OUTDIR/overview.table.tsv"
-    if [[ ! -f "$TSV_FILE" ]]; then
+    if [[ ! -f "$TSV_FILE" ]] || [[ ! -s "$TSV_FILE" ]]; then
         echo "Downloading overview.table.tsv from TOGA server ..."
-        wget -q --no-check-certificate "$TSV_URL" -O "$TSV_FILE"
+        wget --no-check-certificate "$TSV_URL" -O "$TSV_FILE"
     fi
 fi
 
 if [[ ! -f "$TSV_FILE" ]]; then
     echo "ERROR: TSV file not found: $TSV_FILE"
+    exit 1
+fi
+
+if [[ ! -s "$TSV_FILE" ]]; then
+    echo "ERROR: TSV file is empty: $TSV_FILE"
+    echo "       Check that the URL is reachable: $TSV_URL"
     exit 1
 fi
 
