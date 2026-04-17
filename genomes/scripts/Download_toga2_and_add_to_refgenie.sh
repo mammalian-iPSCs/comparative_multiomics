@@ -195,8 +195,9 @@ while IFS=$'\t' read -r dir_name species common_name _rest; do
     # Skip header
     [[ "$dir_name" == "Directory Name" ]] && continue
 
-    # Extract assembly name from dir_name (format: Species__common__HLname__accession)
+    # Extract assembly name and accession from dir_name (format: Species__common__HLname__accession)
     assembly_name=$(echo "$dir_name" | awk -F'__' '{print $3}')
+    accession=$(echo "$dir_name" | awk -F'__' '{print $4}')
 
     # Filter by selected assemblies
     if [[ -n "$SELECT_ASSEMBLIES" ]]; then
@@ -289,8 +290,8 @@ while IFS=$'\t' read -r dir_name species common_name _rest; do
         "$species" \
         "$common_name" \
         "$accession" \
-        "$taxonomy_id" \
-        "$lineage" \
+        "" \
+        "" \
         "TOGA2 (2bit: ${GENOME_BASE_URL}/${dir_name}/)" \
         "TOGA2 (${GTF_BASE_URL}/${dir_name}/query_annotation.gtf.gz)" \
         "$REFERENCE"
