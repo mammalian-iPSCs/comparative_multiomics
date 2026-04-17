@@ -171,16 +171,14 @@ if [[ ! -s "$TSV_FILE" ]]; then
     exit 1
 fi
 
+# Normalize line endings (\r\n or \r-only -> \n)
+tr '\r' '\n' < "$TSV_FILE" | tr -s '\n' > "${TSV_FILE}.tmp" && mv "${TSV_FILE}.tmp" "$TSV_FILE"
+
 #########################
 # Build filter set
 #########################
-declare -A FILTER_SET
 if [[ -n "$SELECT_ASSEMBLIES" ]]; then
-    IFS=',' read -ra FILTER_ARRAY <<< "$SELECT_ASSEMBLIES"
-    for a in "${FILTER_ARRAY[@]}"; do
-        FILTER_SET["$a"]=1
-    done
-    echo "Will process assemblies: ${!FILTER_SET[*]}"
+    echo "Will process assemblies: $SELECT_ASSEMBLIES"
 fi
 
 #########################
@@ -190,17 +188,19 @@ PROCESSED=0
 SKIPPED=0
 FAILED=0
 
-# TOGA2 TSV columns (tab-separated):
-# 1: Directory Name  2: Species  3: Common name  4: Other species names
-# 5: Species Taxonomy ID  6: Taxonomic Lineage  7: Assembly name
-# 8: NCBI accession  9: Source of assembly  10+: rest
-while IFS=$'\t' read -r dir_name species common_name _other taxonomy_id lineage assembly_name accession _rest; do
+# TOGA2 TSV: tab-separated, \r line endings (normalized on download)
+# dir_name format: Species__common_name__HLassembly__accession
+# assembly_name is extracted from dir_name (col count shifts between rows)
+while IFS=$'\t' read -r dir_name species common_name _rest; do
     # Skip header
     [[ "$dir_name" == "Directory Name" ]] && continue
 
+    # Extract assembly name from dir_name (format: Species__common__HLname__accession)
+    assembly_name=$(echo "$dir_name" | awk -F'__' '{print $3}')
+
     # Filter by selected assemblies
     if [[ -n "$SELECT_ASSEMBLIES" ]]; then
-        if [[ -z "${FILTER_SET[$assembly_name]+x}" ]]; then
+        if ! echo ",$SELECT_ASSEMBLIES," | grep -qF ",$assembly_name,"; then
             continue
         fi
     fi
