@@ -1,0 +1,5 @@
+sample,fastq_1,fastq_2,sample_name,species
+22NLHHLT4_5_8bp-UDP0359,/scratch_isilon/groups/compgen/data_transfer/CGLZOO_22/20250616/FASTQ/22NLHHLT4_5_8bp-UDP0359_1.fastq.gz,/scratch_isilon/groups/compgen/data_transfer/CGLZOO_22/20250616/FASTQ/22NLHHLT4_5_8bp-UDP0359_2.fastq.gz,ABA23936,Alytes muletensis
+22VML7LT3_4_8bp-UDP0359,/scratch_isilon/groups/compgen/data_transfer/CGLZOO_22/20250616/FASTQ/22VML7LT3_4_8bp-UDP0359_1.fastq.gz,/scratch_isilon/groups/compgen/data_transfer/CGLZOO_22/20250616/FASTQ/22VML7LT3_4_8bp-UDP0359_2.fastq.gz,ABA23936,Alytes muletensis
+22VML7LT3_5_8bp-UDP0359,/scratch_isilon/groups/compgen/data_transfer/CGLZOO_22/20250616/FASTQ/22VML7LT3_5_8bp-UDP0359_1.fastq.gz,/scratch_isilon/groups/compgen/data_transfer/CGLZOO_22/20250616/FASTQ/22VML7LT3_5_8bp-UDP0359_2.fastq.gz,ABA23936,Alytes muletensis
+22VML7LT3_6_8bp-UDP0359,/scratch_isilon/groups/compgen/data_transfer/CGLZOO_22/20250616/FASTQ/22VML7LT3_6_8bp-UDP0359_1.fastq.gz,/scratch_isilon/groups/compgen/data_transfer/CGLZOO_22/20250616/FASTQ/22VML7LT3_6_8bp-UDP0359_2.fastq.gz,ABA23936,Alytes muletensis

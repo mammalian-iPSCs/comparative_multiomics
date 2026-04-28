@@ -1,0 +1,32 @@
+## to create a samplesheet
+
+/scratch_isilon/groups/compgen/lwange/nf-basicqc/bin/create_samplesheet.sh \
+/scratch_isilon/groups/compgen/data_transfer/CGLZOO_25/CGLZOO_25.xls \
+/scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_25_samplesheet.csv
+
+## to run basicqc
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_01_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_01/results CGLZOO_01 "RNA-seq"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_02_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_02/results CGLZOO_02 "ATAC-seq"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_03_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_03/results CGLZOO_03 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_04_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_04/results CGLZOO_04 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_05_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_05/results CGLZOO_05 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_06_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_06/results CGLZOO_06 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_07_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_07/results CGLZOO_07 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_08_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_08/results CGLZOO_08 "RNA-seq"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_09_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_09/results CGLZOO_09 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_10_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_10/results CGLZOO_10 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_11_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_11/results CGLZOO_11 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_12_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_12/results CGLZOO_12 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_13_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_13/results CGLZOO_13 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_14_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_14/results CGLZOO_14 "ATAC-seq"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_15_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_15/results CGLZOO_15 "RNA-seq"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_16_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_16/results CGLZOO_16 "ATAC-seq"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_17_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_17/results CGLZOO_17 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_18_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_18/results CGLZOO_18 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_19_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_19/results CGLZOO_19 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_20_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_20/results CGLZOO_20 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_21_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_21/results CGLZOO_21 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_22_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_22/results CGLZOO_22 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_23_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_23/results CGLZOO_23 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_24_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_24/results CGLZOO_24 "WGS"
+sbatch nf-basicqc/submit_pipeline.sh /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/inputs/CGLZOO_25_samplesheet.csv /scratch_isilon/groups/compgen/data/Illumina_CryoZoo/BasicQC/CGLZOO_25/results CGLZOO_25 "WGS"

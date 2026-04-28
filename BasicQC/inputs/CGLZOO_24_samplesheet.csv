@@ -1,0 +1,3 @@
+sample,fastq_1,fastq_2,sample_name,species
+22NLHHLT4_5_8bp-UDP0283,/scratch_isilon/groups/compgen/data_transfer/CGLZOO_24/20250703/FASTQ/22NLHHLT4_5_8bp-UDP0283_1.fastq.gz,/scratch_isilon/groups/compgen/data_transfer/CGLZOO_24/20250703/FASTQ/22NLHHLT4_5_8bp-UDP0283_2.fastq.gz,ABA23954,Calotriton asper
+22W22FLT4_3_8bp-UDP0283,/scratch_isilon/groups/compgen/data_transfer/CGLZOO_24/20250703/FASTQ/22W22FLT4_3_8bp-UDP0283_1.fastq.gz,/scratch_isilon/groups/compgen/data_transfer/CGLZOO_24/20250703/FASTQ/22W22FLT4_3_8bp-UDP0283_2.fastq.gz,ABA23954,Calotriton asper

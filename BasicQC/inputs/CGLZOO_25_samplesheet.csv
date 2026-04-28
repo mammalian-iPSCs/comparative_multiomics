@@ -1,0 +1,3 @@
+sample,fastq_1,fastq_2,sample_name,species
+22NLHHLT4_5_UDP0284,/scratch_isilon/groups/compgen/data_transfer/CGLZOO_25/20250709/FASTQ/22NLHHLT4_5_UDP0284_1.fastq.gz,/scratch_isilon/groups/compgen/data_transfer/CGLZOO_25/20250709/FASTQ/22NLHHLT4_5_UDP0284_2.fastq.gz,ABA23956,Salamandra salamandra
+22VTVFLT4_1_UDP0284,/scratch_isilon/groups/compgen/data_transfer/CGLZOO_25/20250709/FASTQ/22VTVFLT4_1_UDP0284_1.fastq.gz,/scratch_isilon/groups/compgen/data_transfer/CGLZOO_25/20250709/FASTQ/22VTVFLT4_1_UDP0284_2.fastq.gz,ABA23956,Salamandra salamandra
