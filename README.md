@@ -44,7 +44,7 @@ See [genomes/README.md](genomes/README.md) for instructions on how to download a
 The available genomes are listed below and updated automatically:  
 
 <!-- GENOMES_START -->
-### Available Genomes
+## Available Genomes
 ```
                               Local refgenie assets                               
                Server subscriptions: http://refgenomes.databio.org                
@@ -93,29 +93,9 @@ The available genomes are listed below and updated automatically:
 │ Macaca_mullatta_RheMac10       │ fasta, gencode_gtf                            │
 │ Gorilla_gorilla_T2Tv2          │ fasta, gencode_gtf                            │
 │ Pongo_abelii_T2Tv2             │ fasta, gencode_gtf                            │
+│ HLaepMel1                      │ fasta, toga_gtf                               │
+│ HLdicBicMin2                   │ fasta, toga2_gtf                              │
+│ mm39                           │ fasta, toga2_gtf                              │
 └────────────────────────────────┴───────────────────────────────────────────────┘
                use refgenie list -g <genome> for more detailed view               
 ```
-
-
-## Dependencies / Installation
-To run the pipelines in this repository, install the following dependencies.  
-
-### Conda 
-
-Different dependencies require different conda environments specified in the subrepos
-
-
-### Nextflow
-Install Nextflow:
-```bash
-curl -s https://get.nextflow.io | bash
-mv nextflow ~/bin/  # or another directory in your PATH
-```
-
-### Optional tools
-- Java 11+ (required by Nextflow)  
-- refgenie (for genome management):
-- Other pipeline-specific tools may be installed via conda or system package manager.
-
----

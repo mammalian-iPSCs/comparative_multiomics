@@ -48,22 +48,26 @@ else
   exit 1
 fi || exit 1
 
+MITO_CONTIGS=$(comm -12 <(zcat $GENOME_GTF | grep "COX1" | awk '{print $1}' | sort -u) \
+                        <(zcat $GENOME_GTF | grep "CYTB" | awk '{print $1}' | sort -u))
 
-MITO_NAME=$(comm -12 <(zcat $GENOME_GTF | grep "COX1" | awk '{print $1}' | sort -u) \
-                      <(zcat $GENOME_GTF | grep "CYTB" | awk '{print $1}' | sort -u))
-
-if [[ -n "$MITO_NAME" ]]; then
-    echo "Mitochondrial chromosome identified based on CYTB and COX1: $MITO_NAME"
+if [[ -n "$MITO_CONTIGS" ]]; then
+    CONTIG_COUNT=$(echo "$MITO_CONTIGS" | wc -l)
+    
+    # Create pipe-separated list for mito_name
+    MITO_NAME=$(echo "$MITO_CONTIGS" | tr '\n' '|' | sed 's/|$//')
+    
+    # Get first contig for ataqv
+    MITO_NAME_ATAQV=$(echo "$MITO_CONTIGS" | head -n 1)
+    
+    if [[ $CONTIG_COUNT -gt 1 ]]; then
+        echo "Warning: Mitochondrial genome fragmented across $CONTIG_COUNT contigs: $MITO_NAME"
+    else
+        echo "Mitochondrial chromosome identified: $MITO_NAME"
+    fi
 else
     echo "No common chromosome found for COX1 and CYTB"
 fi
-
-
-# Check if NF_OPTIONS_PARSED is not empty and set the options accordingly
-if [ -n "$NF_OPTIONS_PARSED" ]; then
-    NF_OPTIONS_PARSED=",$NF_OPTIONS_PARSED"
-fi
-
 
 #### Check these parameters
 params=$(cat <<EOF
@@ -75,6 +79,7 @@ params=$(cat <<EOF
     "gtf": "$GENOME_GTF",
     "save_reference": true,
     "mito_name" : "$MITO_NAME", 
+    "ataqv_mito_reference" : "$MITO_NAME_ATAQV",
     "read_length": 150 $NF_OPTIONS_PARSED
 }
 EOF

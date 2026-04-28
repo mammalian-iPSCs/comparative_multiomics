@@ -10,9 +10,18 @@
 set -euo pipefail
 
 #########################
-# Conda env
+# User-configurable paths — edit these for your environment
 #########################
-export PATH="/home/groups/compgen/lwange/.conda/envs/genomes/bin:$HOME/ucsc-bin-env/bin:$PATH"
+CONDA_ENV_PATH="/home/groups/compgen/lwange/.conda/envs/genomes/bin"
+UCSC_BIN_PATH="/home/groups/compgen/lwange/ucsc-bin-env/bin"
+export PATH="${CONDA_ENV_PATH}:${UCSC_BIN_PATH}:$PATH"
+
+#########################
+# Load cluster modules if available
+#########################
+if command -v module &>/dev/null; then
+    module load SAMtools 2>/dev/null || true
+fi
 
 #########################
 # Usage
@@ -22,6 +31,7 @@ usage() {
 Usage: $0 [OPTIONS]
 
 Download TOGA (v1) genomes + GTF annotations and add them to refgenie.
+Refgenie genome names use the species name (e.g. Panthera_tigris_TOGA).
 
 Uses the overview.table.tsv index from the TOGA server. Genomes are downloaded
 from NCBI (via datasets CLI) for GCA_/GCF_ accessions, or via wget for
@@ -41,18 +51,15 @@ Options:
   -r REFERENCE      Reference to use (default: human_hg38_reference)
   -o OUTDIR         Output directory for downloads (default: \$PWD/toga1_downloads)
   -m METADATA       Path to genome_metadata.tsv (default: \$PWD/genome_metadata.tsv)
-  -g                Download genomes and add as fasta asset (default: true)
-  -G                Skip genome download (GTF only, assumes fasta already in refgenie)
+  -g                Download genomes and add as fasta asset (default)
+  -G                GTF-only mode: skip genome download, assume fasta already in refgenie
   -h                Show this help message
 
-Assets added to refgenie:
-  - fasta:    genome sequence (built from downloaded FASTA)
-  - toga_gtf: TOGA annotation (added as custom asset)
-
-Assembly provenance is recorded in genome_metadata.tsv.
+Fasta files are removed after successful refgenie registration.
+Set CONDA_ENV_PATH at the top of this script for your environment.
 
 Prerequisites:
-  - conda environment with refgenie active
+  - refgenie in PATH (via CONDA_ENV_PATH)
   - SAMtools available in PATH or via module
   - datasets (NCBI) available for GCA_/GCF_ accessions
   - wget available
@@ -114,19 +121,11 @@ if [[ ! -f "$METADATA_FILE" ]]; then
     echo "[metadata] Created $METADATA_FILE"
 fi
 
-# Append a row to the metadata file (skip if assembly_name already present)
 record_metadata() {
-    local assembly_name="$1"
-    local species="$2"
-    local common_name="$3"
-    local accession="$4"
-    local taxonomy_id="$5"
-    local lineage="$6"
-    local genome_source="$7"
-    local annotation_source="$8"
-    local annotation_ref="$9"
+    local assembly_name="$1" species="$2" common_name="$3" accession="$4"
+    local taxonomy_id="$5" lineage="$6" genome_source="$7"
+    local annotation_source="$8" annotation_ref="$9"
 
-    # Skip if already recorded
     if grep -qP "^${assembly_name}\t" "$METADATA_FILE" 2>/dev/null; then
         echo "[metadata] $assembly_name already in metadata — skipping."
         return
@@ -144,16 +143,12 @@ record_metadata() {
 }
 
 #########################
-# Load modules if available
-#########################
-if command -v module &>/dev/null; then
-    module load SAMtools 2>/dev/null || true
-fi
-
 # Check prerequisites
+#########################
 for cmd in wget refgenie; do
     if ! command -v "$cmd" &>/dev/null; then
         echo "ERROR: $cmd not found in PATH."
+        echo "       Set CONDA_ENV_PATH at the top of this script to your conda env."
         exit 1
     fi
 done
@@ -185,8 +180,15 @@ if [[ ! -s "$TSV_FILE" ]]; then
     exit 1
 fi
 
+# Copy to local /tmp to avoid NFS stale-file-handle errors on shared clusters
+LOCAL_TSV=$(mktemp /tmp/toga1_tsv.XXXXXX)
+cp "$TSV_FILE" "$LOCAL_TSV"
+trap 'rm -f "$LOCAL_TSV"' EXIT
+
 #########################
 # Build TOGA2 exclusion set (if provided)
+# Uses dir_name column to extract assembly name — robust against column shifts
+# caused by embedded tabs in the "Other species names" field.
 #########################
 declare -A TOGA2_SET
 if [[ -n "$TOGA2_TSV" ]]; then
@@ -194,10 +196,13 @@ if [[ -n "$TOGA2_TSV" ]]; then
         echo "ERROR: TOGA2 TSV not found: $TOGA2_TSV"
         exit 1
     fi
+    # Normalize TOGA2 TSV line endings before parsing
+    tr '\r' '\n' < "$TOGA2_TSV" | tr -s '\n' > "${TOGA2_TSV}.tmp" && mv "${TOGA2_TSV}.tmp" "$TOGA2_TSV"
     echo "Loading TOGA2 assembly list for exclusion ..."
-    while IFS=$'\t' read -r _dir _sp _cn _other _taxid _lineage asm_name _rest; do
-        [[ "$_dir" == "Directory Name" ]] && continue
-        TOGA2_SET["$asm_name"]=1
+    while IFS=$'\t' read -r dir_name _rest; do
+        [[ "$dir_name" == "Directory Name" ]] && continue
+        asm_name=$(echo "$dir_name" | awk -F'__' '{print $3}')
+        [[ -n "$asm_name" ]] && TOGA2_SET["$asm_name"]=1
     done < "$TOGA2_TSV"
     echo "  Loaded ${#TOGA2_SET[@]} TOGA2 assemblies to exclude."
 fi
@@ -205,13 +210,8 @@ fi
 #########################
 # Build filter set
 #########################
-declare -A FILTER_SET
 if [[ -n "$SELECT_ASSEMBLIES" ]]; then
-    IFS=',' read -ra FILTER_ARRAY <<< "$SELECT_ASSEMBLIES"
-    for a in "${FILTER_ARRAY[@]}"; do
-        FILTER_SET["$a"]=1
-    done
-    echo "Will process assemblies: ${!FILTER_SET[*]}"
+    echo "Will process assemblies: $SELECT_ASSEMBLIES"
 fi
 
 #########################
@@ -400,7 +400,7 @@ while IFS=$'\t' read -r species common_name taxonomy_id lineage assembly_name ac
 
     # Filter by selected assemblies
     if [[ -n "$SELECT_ASSEMBLIES" ]]; then
-        if [[ -z "${FILTER_SET[$assembly_name]+x}" ]]; then
+        if ! echo ",$SELECT_ASSEMBLIES," | grep -qF ",$assembly_name,"; then
             continue
         fi
     fi
@@ -422,9 +422,13 @@ while IFS=$'\t' read -r species common_name taxonomy_id lineage assembly_name ac
     # Build directory name
     dir_name=$(build_dir_name "$species" "$common_name" "$assembly_name")
 
+    # Human-readable refgenie genome name (e.g. Panthera_tigris_TOGA)
+    refgenie_name=$(echo "$species" | tr ' ' '_')_TOGA
+
     echo ""
     echo "========================================"
     echo "Processing: $assembly_name ($species - $common_name)"
+    echo "  Refgenie name: $refgenie_name"
     echo "  Order: $order | Source: $accession"
     echo "  Directory: $dir_name"
     echo "========================================"
@@ -438,8 +442,8 @@ while IFS=$'\t' read -r species common_name taxonomy_id lineage assembly_name ac
 
     if [[ "$DOWNLOAD_GENOMES" == true ]]; then
         # Check if fasta already in refgenie
-        if refgenie list -g "$assembly_name" 2>/dev/null | grep -q "fasta"; then
-            echo "[genome] fasta asset already exists in refgenie for $assembly_name — skipping download."
+        if refgenie list -g "$refgenie_name" 2>/dev/null | grep -q "fasta"; then
+            echo "[genome] fasta already in refgenie for $refgenie_name — skipping download."
             GENOME_OK=true
             GENOME_SOURCE="already in refgenie"
         elif download_genome "$assembly_name" "$accession" "$FASTA_GZ"; then
@@ -460,25 +464,27 @@ while IFS=$'\t' read -r species common_name taxonomy_id lineage assembly_name ac
         fi
     else
         # -G mode: just check refgenie
-        if refgenie list -g "$assembly_name" 2>/dev/null | grep -q "fasta"; then
+        if refgenie list -g "$refgenie_name" 2>/dev/null | grep -q "fasta"; then
             GENOME_OK=true
             GENOME_SOURCE="already in refgenie"
         else
-            echo "[skip] $assembly_name — no fasta in refgenie and genome download disabled (-G)"
+            echo "[skip] $refgenie_name — no fasta in refgenie and genome download disabled (-G)"
             ((SKIPPED++)) || true
             continue
         fi
     fi
 
     #########################
-    # 2. Add fasta to refgenie (if downloaded and not already there)
+    # 2. Add fasta to refgenie (if downloaded and not already there), then clean up
     #########################
     if [[ "$GENOME_OK" == true ]] && [[ -f "$FASTA_GZ" ]]; then
-        if ! refgenie list -g "$assembly_name" 2>/dev/null | grep -q "fasta"; then
-            echo "[refgenie] Building fasta asset for $assembly_name ..."
-            refgenie build "${assembly_name}/fasta" --files fasta="$FASTA_GZ" \
+        if ! refgenie list -g "$refgenie_name" 2>/dev/null | grep -q "fasta"; then
+            echo "[refgenie] Building fasta asset for $refgenie_name ..."
+            refgenie build "${refgenie_name}/fasta" --files fasta="$FASTA_GZ" \
                 --genome-description "${species} (${common_name}), ${accession}" -R
             echo "[refgenie] fasta asset added."
+            rm -f "$FASTA_GZ"
+            echo "[cleanup] Removed $FASTA_GZ"
         fi
     fi
 
@@ -486,8 +492,8 @@ while IFS=$'\t' read -r species common_name taxonomy_id lineage assembly_name ac
     # 3. Get GTF annotation
     #########################
     # Check if toga_gtf already exists
-    if refgenie list -g "$assembly_name" 2>/dev/null | grep -q "toga_gtf"; then
-        echo "[refgenie] toga_gtf already exists for $assembly_name — skipping."
+    if refgenie list -g "$refgenie_name" 2>/dev/null | grep -q "toga_gtf"; then
+        echo "[refgenie] toga_gtf already exists for $refgenie_name — skipping."
         # Still record metadata if not yet recorded
         record_metadata \
             "$assembly_name" "$species" "$common_name" "$accession" \
@@ -531,8 +537,8 @@ while IFS=$'\t' read -r species common_name taxonomy_id lineage assembly_name ac
     # 4. Add GTF to refgenie as toga_gtf
     #########################
     if [[ -f "$GTF_FILE" ]]; then
-        echo "[refgenie] Adding toga_gtf asset for $assembly_name ..."
-        refgenie add "${assembly_name}/toga_gtf" --path "$GTF_FILE" -R
+        echo "[refgenie] Adding toga_gtf asset for $refgenie_name ..."
+        refgenie add "${refgenie_name}/toga_gtf" --path "$GTF_FILE" -R
         echo "[refgenie] toga_gtf asset added."
         ((PROCESSED++)) || true
     else
@@ -556,7 +562,7 @@ while IFS=$'\t' read -r species common_name taxonomy_id lineage assembly_name ac
 
     echo "[done] $assembly_name complete."
 
-done < "$TSV_FILE"
+done < "$LOCAL_TSV"
 
 # Clean up tmp directory
 rm -rf "$TMPDIR_BASE"

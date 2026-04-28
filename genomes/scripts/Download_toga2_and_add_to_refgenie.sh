@@ -10,9 +10,19 @@
 set -euo pipefail
 
 #########################
-# Conda env
+# User-configurable paths — edit these for your environment
 #########################
-export PATH="/home/groups/compgen/lwange/.conda/envs/genomes/bin:$HOME/ucsc-bin-env/bin:$PATH"
+CONDA_ENV_PATH="/home/groups/compgen/lwange/.conda/envs/genomes/bin"
+UCSC_BIN_PATH="/home/groups/compgen/lwange/ucsc-bin-env/bin"
+export PATH="${CONDA_ENV_PATH}:${UCSC_BIN_PATH}:$PATH"
+
+#########################
+# Load cluster modules if available
+#########################
+if command -v module &>/dev/null; then
+    module load Java   2>/dev/null || true
+    module load SAMtools 2>/dev/null || true
+fi
 
 #########################
 # Usage
@@ -22,32 +32,33 @@ usage() {
 Usage: $0 [OPTIONS]
 
 Download TOGA2 genomes (2bit -> fasta) and GTF annotations, then add them to refgenie.
+Refgenie genome names use the species name (e.g. Panthera_tigris_TOGA) rather than
+the internal assembly code.
 
 Options:
-  -a ASSEMBLIES   Comma-separated list of assembly names to process (e.g. HLaciJub2,HLailMel2)
+  -a ASSEMBLIES   Comma-separated list of assembly names (e.g. HLaciJub2,HLailMel2)
                   If not provided, all assemblies in the TSV are processed.
   -t TSV_FILE     Path to assemblies_and_species.tsv (default: download from TOGA2 server)
   -r REFERENCE    TOGA2 reference to use for annotations (default: reference_human_hg38)
-  -c CLASS        Taxonomic class for genome downloads: Mammalia, Aves, CEC (default: Mammalia)
+  -c CLASS        Taxonomic class: Mammalia, Aves, CEC (default: Mammalia)
   -o OUTDIR       Output directory for downloaded files (default: \$PWD/toga2_downloads)
   -m METADATA     Path to genome_metadata.tsv (default: \$PWD/genome_metadata.tsv)
+  -G              GTF-only mode: skip genome download, assume fasta already in refgenie
   -h              Show this help message
 
-The fasta is added as refgenie asset "fasta" and the GTF as custom asset "toga_gtf".
-Assembly provenance is recorded in genome_metadata.tsv.
+Refgenie genome name is derived from species name: e.g. Panthera_tigris_TOGA.
+Fasta files are removed after successful refgenie registration.
+Set CONDA_ENV_PATH and UCSC_BIN_PATH at the top of this script for your environment.
 
 Prerequisites:
-  - conda environment with refgenie active
-  - twoBitToFa (UCSC kent tools) available in PATH or via module
+  - refgenie in PATH (via CONDA_ENV_PATH)
+  - twoBitToFa (UCSC kent tools, via UCSC_BIN_PATH)
   - SAMtools available in PATH or via module
   - wget available
 EOF
     exit 0
 }
-module load Java
-module load SAMtools
-#eval "$(conda shell.bash hook)"
-#conda activate genomes
+
 #########################
 # Defaults
 #########################
@@ -57,11 +68,12 @@ REFERENCE="reference_human_hg38"
 TAXON_CLASS="Mammalia"
 OUTDIR="$PWD/toga2_downloads"
 METADATA_FILE="$PWD/genome_metadata.tsv"
+DOWNLOAD_GENOMES=true
 
 #########################
 # Parse arguments
 #########################
-while getopts "a:t:r:c:o:m:h" opt; do
+while getopts "a:t:r:c:o:m:Gh" opt; do
     case $opt in
         a) SELECT_ASSEMBLIES="$OPTARG" ;;
         t) TSV_FILE="$OPTARG" ;;
@@ -69,6 +81,7 @@ while getopts "a:t:r:c:o:m:h" opt; do
         c) TAXON_CLASS="$OPTARG" ;;
         o) OUTDIR="$OPTARG" ;;
         m) METADATA_FILE="$OPTARG" ;;
+        G) DOWNLOAD_GENOMES=false ;;
         h) usage ;;
         *) usage ;;
     esac
@@ -98,19 +111,11 @@ if [[ ! -f "$METADATA_FILE" ]]; then
     echo "[metadata] Created $METADATA_FILE"
 fi
 
-# Append a row to the metadata file (skip if assembly_name already present)
 record_metadata() {
-    local assembly_name="$1"
-    local species="$2"
-    local common_name="$3"
-    local accession="$4"
-    local taxonomy_id="$5"
-    local lineage="$6"
-    local genome_source="$7"
-    local annotation_source="$8"
-    local annotation_ref="$9"
+    local assembly_name="$1" species="$2" common_name="$3" accession="$4"
+    local taxonomy_id="$5" lineage="$6" genome_source="$7"
+    local annotation_source="$8" annotation_ref="$9"
 
-    # Skip if already recorded
     if grep -qP "^${assembly_name}\t" "$METADATA_FILE" 2>/dev/null; then
         echo "[metadata] $assembly_name already in metadata — skipping."
         return
@@ -128,24 +133,19 @@ record_metadata() {
 }
 
 #########################
-# Load modules if available
-#########################
-if command -v module &>/dev/null; then
-    module load SAMtools 2>/dev/null || true
-fi
-
 # Check prerequisites
+#########################
 for cmd in wget refgenie; do
     if ! command -v "$cmd" &>/dev/null; then
-        echo "ERROR: $cmd not found in PATH. Please install or load the module."
+        echo "ERROR: $cmd not found in PATH."
+        echo "       Set CONDA_ENV_PATH at the top of this script to your conda env."
         exit 1
     fi
 done
 
-# Check for twoBitToFa
-if ! command -v twoBitToFa &>/dev/null; then
+if [[ "$DOWNLOAD_GENOMES" == true ]] && ! command -v twoBitToFa &>/dev/null; then
     echo "ERROR: twoBitToFa not found in PATH."
-    echo "Install UCSC kent tools or load the appropriate module."
+    echo "       Set UCSC_BIN_PATH at the top of this script to your UCSC tools directory."
     exit 1
 fi
 
@@ -174,6 +174,11 @@ fi
 # Normalize line endings (\r\n or \r-only -> \n)
 tr '\r' '\n' < "$TSV_FILE" | tr -s '\n' > "${TSV_FILE}.tmp" && mv "${TSV_FILE}.tmp" "$TSV_FILE"
 
+# Copy to local /tmp to avoid NFS stale-file-handle errors on shared clusters
+LOCAL_TSV=$(mktemp /tmp/toga2_tsv.XXXXXX)
+cp "$TSV_FILE" "$LOCAL_TSV"
+trap 'rm -f "$LOCAL_TSV"' EXIT
+
 #########################
 # Build filter set
 #########################
@@ -188,27 +193,30 @@ PROCESSED=0
 SKIPPED=0
 FAILED=0
 
-# TOGA2 TSV: tab-separated, \r line endings (normalized on download)
+# TOGA2 TSV: tab-separated, \r-only line endings (normalized above).
 # dir_name format: Species__common_name__HLassembly__accession
-# assembly_name is extracted from dir_name (col count shifts between rows)
+# "Other species names" column may contain embedded tabs — only name the first
+# three fields and derive assembly_name/accession from dir_name instead.
 while IFS=$'\t' read -r dir_name species common_name _rest; do
-    # Skip header
     [[ "$dir_name" == "Directory Name" ]] && continue
 
-    # Extract assembly name and accession from dir_name (format: Species__common__HLname__accession)
     assembly_name=$(echo "$dir_name" | awk -F'__' '{print $3}')
-    accession=$(echo "$dir_name" | awk -F'__' '{print $4}')
+    accession=$(echo "$dir_name"     | awk -F'__' '{print $4}')
+    [[ -z "$assembly_name" ]] && continue
 
-    # Filter by selected assemblies
     if [[ -n "$SELECT_ASSEMBLIES" ]]; then
         if ! echo ",$SELECT_ASSEMBLIES," | grep -qF ",$assembly_name,"; then
             continue
         fi
     fi
 
+    # Human-readable refgenie genome name (e.g. Panthera_tigris_TOGA)
+    refgenie_name=$(echo "$species" | tr ' ' '_')_TOGA
+
     echo ""
     echo "========================================"
     echo "Processing: $assembly_name ($species - $common_name)"
+    echo "  Refgenie name: $refgenie_name"
     echo "  Directory: $dir_name"
     echo "========================================"
 
@@ -218,28 +226,56 @@ while IFS=$'\t' read -r dir_name species common_name _rest; do
     FASTA_GZ="$GENOME_DIR/${assembly_name}.fa.gz"
     TWOBIT_FILE="$GENOME_DIR/${assembly_name}.2bit"
 
-    if [[ -f "$FASTA_GZ" ]]; then
-        echo "[genome] Already exists: $FASTA_GZ — skipping download."
-    else
-        GENOME_URL="${GENOME_BASE_URL}/${dir_name}/${assembly_name}.2bit"
-        echo "[genome] Downloading 2bit from: $GENOME_URL"
-        if ! wget -q --no-check-certificate -c "$GENOME_URL" -O "$TWOBIT_FILE"; then
-            echo "[genome] WARNING: Failed to download genome for $assembly_name — skipping."
+    if [[ "$DOWNLOAD_GENOMES" == true ]]; then
+        if refgenie list -g "$refgenie_name" 2>/dev/null | grep -q "fasta"; then
+            echo "[genome] fasta already in refgenie for $refgenie_name — skipping download."
+        elif [[ -f "$FASTA_GZ" ]]; then
+            echo "[genome] Already exists: $FASTA_GZ — skipping download."
+        else
+            GENOME_URL="${GENOME_BASE_URL}/${dir_name}/${assembly_name}.2bit"
+            echo "[genome] Downloading 2bit from: $GENOME_URL"
+            if ! wget -q --no-check-certificate -c "$GENOME_URL" -O "$TWOBIT_FILE"; then
+                echo "[genome] WARNING: Failed to download genome for $assembly_name — skipping."
+                rm -f "$TWOBIT_FILE"
+                ((FAILED++)) || true
+                continue
+            fi
+
+            echo "[genome] Converting 2bit -> fasta -> gzipped fasta ..."
+            twoBitToFa "$TWOBIT_FILE" /dev/stdout | gzip -c > "$FASTA_GZ"
             rm -f "$TWOBIT_FILE"
-            ((FAILED++)) || true
-            continue
+            echo "[genome] Done: $FASTA_GZ"
         fi
 
-        echo "[genome] Converting 2bit -> fasta -> gzipped fasta ..."
-        twoBitToFa "$TWOBIT_FILE" /dev/stdout | gzip -c > "$FASTA_GZ"
-        rm -f "$TWOBIT_FILE"
-        echo "[genome] Done: $FASTA_GZ"
+        #########################
+        # 2. Add fasta to refgenie, then clean up
+        #########################
+        if [[ -f "$FASTA_GZ" ]]; then
+            if refgenie list -g "$refgenie_name" 2>/dev/null | grep -q "fasta"; then
+                echo "[refgenie] fasta already exists for $refgenie_name — skipping build."
+            else
+                echo "[refgenie] Building fasta asset for $refgenie_name ..."
+                refgenie build "${refgenie_name}/fasta" --files fasta="$FASTA_GZ" \
+                    --genome-description "${species} (${common_name}), ${accession}" -R
+                echo "[refgenie] fasta asset added."
+                rm -f "$FASTA_GZ"
+                echo "[cleanup] Removed $FASTA_GZ"
+            fi
+        fi
+    else
+        # -G mode: GTF only — require fasta already in refgenie
+        if ! refgenie list -g "$refgenie_name" 2>/dev/null | grep -q "fasta"; then
+            echo "[skip] $refgenie_name — no fasta in refgenie and genome download disabled (-G)"
+            ((SKIPPED++)) || true
+            continue
+        fi
+        echo "[genome] -G mode: using existing fasta for $refgenie_name"
     fi
 
     #########################
-    # 2. Download GTF annotation
+    # 3. Download GTF annotation
     #########################
-    GTF_FILE="$GTF_DIR/${assembly_name}_toga_hg38.gtf"
+    GTF_FILE="$GTF_DIR/${assembly_name}_toga2_hg38.gtf"
 
     if [[ -f "$GTF_FILE" ]]; then
         echo "[gtf] Already exists: $GTF_FILE — skipping download."
@@ -256,26 +292,14 @@ while IFS=$'\t' read -r dir_name species common_name _rest; do
     fi
 
     #########################
-    # 3. Add fasta to refgenie
-    #########################
-    echo "[refgenie] Building fasta asset for $assembly_name ..."
-    if refgenie list -g "$assembly_name" 2>/dev/null | grep -q "fasta"; then
-        echo "[refgenie] fasta asset already exists for $assembly_name — skipping."
-    else
-        refgenie build "${assembly_name}/fasta" --files fasta="$FASTA_GZ" \
-            --genome-description "${species} (${common_name}), ${accession}" -R
-        echo "[refgenie] fasta asset added."
-    fi
-
-    #########################
     # 4. Add GTF as custom toga_gtf asset
     #########################
     if [[ -f "$GTF_FILE" ]]; then
-        echo "[refgenie] Adding toga_gtf asset for $assembly_name ..."
-        if refgenie list -g "$assembly_name" 2>/dev/null | grep -q "toga_gtf"; then
-            echo "[refgenie] toga_gtf asset already exists for $assembly_name — skipping."
+        if refgenie list -g "$refgenie_name" 2>/dev/null | grep -q "toga_gtf"; then
+            echo "[refgenie] toga_gtf already exists for $refgenie_name — skipping."
         else
-            refgenie add "${assembly_name}/toga_gtf" --path "$GTF_FILE" -R
+            echo "[refgenie] Adding toga_gtf asset for $refgenie_name ..."
+            refgenie add "${refgenie_name}/toga_gtf" --path "$GTF_FILE" -R
             echo "[refgenie] toga_gtf asset added."
         fi
     else
@@ -286,12 +310,8 @@ while IFS=$'\t' read -r dir_name species common_name _rest; do
     # 5. Record metadata
     #########################
     record_metadata \
-        "$assembly_name" \
-        "$species" \
-        "$common_name" \
-        "$accession" \
-        "" \
-        "" \
+        "$assembly_name" "$species" "$common_name" "$accession" \
+        "" "" \
         "TOGA2 (2bit: ${GENOME_BASE_URL}/${dir_name}/)" \
         "TOGA2 (${GTF_BASE_URL}/${dir_name}/query_annotation.gtf.gz)" \
         "$REFERENCE"
@@ -299,7 +319,7 @@ while IFS=$'\t' read -r dir_name species common_name _rest; do
     ((PROCESSED++)) || true
     echo "[done] $assembly_name complete."
 
-done < "$TSV_FILE"
+done < "$LOCAL_TSV"
 
 echo ""
 echo "========================================"

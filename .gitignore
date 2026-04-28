@@ -31,9 +31,13 @@ genomes/TOGA_test/
 genomes/TOGA_primates/_Homo_sapiens/
 genomes/chains/
 **/work/
+**/results/
 **/map2*/
 **/ATAC_test/
 data_transfer/
 RNA-seq/Batch1_HQ_Genomes/
 genomes/chains/
+**/.nextflow/
+.nextflow.log*
+*.rds
 .DS_Store
